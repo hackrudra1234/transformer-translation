@@ -1,6 +1,7 @@
 import re
 import torch
 from collections import Counter
+from torch.nn.utils.rnn import pad_sequence
 
 def simple_tokenize(text):
     return re.findall(r"\w+|[^\w\s]", text, re.UNICODE)
