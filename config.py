@@ -39,7 +39,7 @@ EPOCHS = 10
 # Inference
 # -----------------------------
 MAX_LEN = 40
-
+BLEU_MAX_EXAMPLES = 100
 BEAM_SIZE = 4
 LENGTH_PENALTY_ALPHA = 0.6
 
