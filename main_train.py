@@ -24,6 +24,10 @@ from config import (
     DROPOUT,
     LEARNING_RATE,
     EPOCHS,
+    MAX_LEN,
+    BEAM_SIZE,
+    LENGTH_PENALTY_ALPHA,
+    BLEU_MAX_EXAMPLES,
     CHECKPOINT_PATH,
     EXPERIMENT_NAME,
     EXPERIMENT_DIR,
@@ -39,7 +43,15 @@ from model.transformer import Transformer
 
 from training.train import train_one_epoch
 from training.evaluate import evaluate_model
-from training.metrics import calculate_perplexity
+
+from training.metrics import (
+    calculate_perplexity,
+    evaluate_bleu
+)
+
+from inference.translate import (
+    translate_sentence
+)
 
 from experiments.logger import (
     save_epoch_history,
@@ -67,13 +79,13 @@ def set_seed(seed):
 
 
 # ============================================================
-# Main Training Pipeline
+# Main
 # ============================================================
 
 def main():
 
     # --------------------------------------------------------
-    # 1. Reproducibility
+    # 1. Seed
     # --------------------------------------------------------
 
     set_seed(SEED)
@@ -129,7 +141,7 @@ def main():
     )
 
     print(
-        "Checkpoint:",
+        "Checkpoint path:",
         CHECKPOINT_PATH
     )
 
@@ -153,7 +165,6 @@ def main():
     )
 
     if checkpoint_directory:
-
         os.makedirs(
             checkpoint_directory,
             exist_ok=True
@@ -171,7 +182,7 @@ def main():
 
 
     # --------------------------------------------------------
-    # 5. Output file paths
+    # 5. Output paths
     # --------------------------------------------------------
 
     history_path = os.path.join(
@@ -210,12 +221,9 @@ def main():
     # 7. Train / validation split
     # --------------------------------------------------------
 
-    split_data = (
-        full_dataset
-        .train_test_split(
-            test_size=VALIDATION_SIZE,
-            seed=SEED
-        )
+    split_data = full_dataset.train_test_split(
+        test_size=VALIDATION_SIZE,
+        seed=SEED
     )
 
     train_dataset = split_data["train"]
@@ -246,12 +254,12 @@ def main():
     )
 
     print(
-        "German vocabulary:",
+        "German vocab:",
         len(german_vocab)
     )
 
     print(
-        "English vocabulary:",
+        "English vocab:",
         len(english_vocab)
     )
 
@@ -276,29 +284,19 @@ def main():
 
     train_loader = DataLoader(
         train_dataset,
-
         batch_size=BATCH_SIZE,
-
         shuffle=True,
-
         collate_fn=collate_fn,
-
         num_workers=2,
-
         pin_memory=pin_memory
     )
 
     val_loader = DataLoader(
         val_dataset,
-
         batch_size=BATCH_SIZE,
-
         shuffle=False,
-
         collate_fn=collate_fn,
-
         num_workers=2,
-
         pin_memory=pin_memory
     )
 
@@ -314,7 +312,7 @@ def main():
 
 
     # --------------------------------------------------------
-    # 11. Create model
+    # 11. Model
     # --------------------------------------------------------
 
     print("\n" + "=" * 70)
@@ -322,49 +320,31 @@ def main():
     print("=" * 70)
 
     model = Transformer(
-
-        src_vocab_size=
-            len(german_vocab),
-
-        tgt_vocab_size=
-            len(english_vocab),
-
-        d_model=
-            D_MODEL,
-
-        num_heads=
-            NUM_HEADS,
-
-        d_ff=
-            D_FF,
-
-        num_encoder_layers=
-            NUM_ENCODER_LAYERS,
-
-        num_decoder_layers=
-            NUM_DECODER_LAYERS,
-
-        dropout=
-            DROPOUT
+        src_vocab_size=len(german_vocab),
+        tgt_vocab_size=len(english_vocab),
+        d_model=D_MODEL,
+        num_heads=NUM_HEADS,
+        d_ff=D_FF,
+        num_encoder_layers=NUM_ENCODER_LAYERS,
+        num_decoder_layers=NUM_DECODER_LAYERS,
+        dropout=DROPOUT
     )
 
     model = model.to(device)
 
 
     # --------------------------------------------------------
-    # 12. Parameters
+    # 12. Parameter count
     # --------------------------------------------------------
 
     total_parameters = sum(
         parameter.numel()
-        for parameter
-        in model.parameters()
+        for parameter in model.parameters()
     )
 
     trainable_parameters = sum(
         parameter.numel()
-        for parameter
-        in model.parameters()
+        for parameter in model.parameters()
         if parameter.requires_grad
     )
 
@@ -384,8 +364,7 @@ def main():
     # --------------------------------------------------------
 
     loss_fn = nn.CrossEntropyLoss(
-        ignore_index=
-            english_vocab["<pad>"]
+        ignore_index=english_vocab["<pad>"]
     )
 
 
@@ -400,7 +379,7 @@ def main():
 
 
     # --------------------------------------------------------
-    # 15. Show configuration
+    # 15. Display configuration
     # --------------------------------------------------------
 
     print("\n" + "=" * 70)
@@ -408,7 +387,7 @@ def main():
     print("=" * 70)
 
     print("D_MODEL:", D_MODEL)
-    print("HEADS:", NUM_HEADS)
+    print("NUM_HEADS:", NUM_HEADS)
     print("D_FF:", D_FF)
 
     print(
@@ -421,53 +400,49 @@ def main():
         NUM_DECODER_LAYERS
     )
 
+    print("DROPOUT:", DROPOUT)
+    print("BATCH SIZE:", BATCH_SIZE)
+    print("LEARNING RATE:", LEARNING_RATE)
+    print("EPOCHS:", EPOCHS)
+
     print(
-        "DROPOUT:",
-        DROPOUT
+        "BLEU MAX EXAMPLES:",
+        BLEU_MAX_EXAMPLES
     )
 
     print(
-        "BATCH SIZE:",
-        BATCH_SIZE
+        "BEAM SIZE:",
+        BEAM_SIZE
     )
 
     print(
-        "LEARNING RATE:",
-        LEARNING_RATE
-    )
-
-    print(
-        "EPOCHS:",
-        EPOCHS
+        "LENGTH PENALTY:",
+        LENGTH_PENALTY_ALPHA
     )
 
 
     # --------------------------------------------------------
-    # 16. Experiment tracking variables
+    # 16. Tracking variables
     # --------------------------------------------------------
 
     best_val_loss = float("inf")
 
     best_epoch = None
-
     best_perplexity = None
 
-    training_start_time = (
-        time.time()
-    )
+    training_start_time = time.time()
 
 
     # --------------------------------------------------------
-    # 17. Reset peak GPU stats
+    # 17. Reset GPU memory tracker
     # --------------------------------------------------------
 
     if device.type == "cuda":
-
         torch.cuda.reset_peak_memory_stats()
 
 
     # --------------------------------------------------------
-    # 18. Training loop
+    # 18. Training
     # --------------------------------------------------------
 
     print("\n" + "=" * 70)
@@ -476,9 +451,7 @@ def main():
 
     for epoch in range(EPOCHS):
 
-        epoch_start_time = (
-            time.time()
-        )
+        epoch_start_time = time.time()
 
 
         # ----------------------------------------------------
@@ -486,31 +459,22 @@ def main():
         # ----------------------------------------------------
 
         train_loss = train_one_epoch(
-
             model=model,
-
             train_loader=train_loader,
-
             optimizer=optimizer,
-
             loss_fn=loss_fn,
-
             device=device
         )
 
 
         # ----------------------------------------------------
-        # Validate
+        # Validation
         # ----------------------------------------------------
 
         val_loss = evaluate_model(
-
             model=model,
-
             val_loader=val_loader,
-
             loss_fn=loss_fn,
-
             device=device
         )
 
@@ -525,7 +489,7 @@ def main():
 
 
         # ----------------------------------------------------
-        # Epoch duration
+        # Epoch time
         # ----------------------------------------------------
 
         epoch_time_min = (
@@ -535,72 +499,44 @@ def main():
 
 
         # ----------------------------------------------------
-        # Save epoch history
+        # Save history
         # ----------------------------------------------------
 
         save_epoch_history(
-
-            file_path=
-                history_path,
-
-            epoch=
-                epoch + 1,
-
-            train_loss=
-                train_loss,
-
-            val_loss=
-                val_loss,
-
-            perplexity=
-                perplexity,
-
-            epoch_time_min=
-                epoch_time_min
+            file_path=history_path,
+            epoch=epoch + 1,
+            train_loss=train_loss,
+            val_loss=val_loss,
+            perplexity=perplexity,
+            epoch_time_min=epoch_time_min
         )
 
 
         # ----------------------------------------------------
-        # Print epoch
+        # Display epoch
         # ----------------------------------------------------
 
         print(
-
             f"Epoch "
-            f"{epoch + 1:02d}/"
-            f"{EPOCHS:02d} | "
-
-            f"Train Loss: "
-            f"{train_loss:.4f} | "
-
-            f"Val Loss: "
-            f"{val_loss:.4f} | "
-
-            f"PPL: "
-            f"{perplexity:.2f} | "
-
-            f"Time: "
-            f"{epoch_time_min:.2f} min"
+            f"{epoch + 1:02d}/{EPOCHS:02d} | "
+            f"Train Loss: {train_loss:.4f} | "
+            f"Val Loss: {val_loss:.4f} | "
+            f"PPL: {perplexity:.2f} | "
+            f"Time: {epoch_time_min:.2f} min"
         )
 
 
         # ----------------------------------------------------
-        # Save best model
+        # Save best checkpoint
         # ----------------------------------------------------
 
         if val_loss < best_val_loss:
 
-            best_val_loss = (
-                val_loss
-            )
+            best_val_loss = val_loss
 
-            best_epoch = (
-                epoch + 1
-            )
+            best_epoch = epoch + 1
 
-            best_perplexity = (
-                perplexity
-            )
+            best_perplexity = perplexity
 
 
             checkpoint = {
@@ -669,7 +605,6 @@ def main():
                 CHECKPOINT_PATH
             )
 
-
             print(
                 "Best model saved:",
                 CHECKPOINT_PATH
@@ -677,7 +612,7 @@ def main():
 
 
     # --------------------------------------------------------
-    # 19. Total training duration
+    # 19. Training time
     # --------------------------------------------------------
 
     total_time_min = (
@@ -687,7 +622,7 @@ def main():
 
 
     # --------------------------------------------------------
-    # 20. GPU peak memory
+    # 20. Peak GPU memory
     # --------------------------------------------------------
 
     peak_gpu_memory_gb = None
@@ -695,16 +630,119 @@ def main():
     if device.type == "cuda":
 
         peak_gpu_memory_gb = (
-
             torch.cuda
             .max_memory_allocated()
-
             / 1024**3
         )
 
 
     # --------------------------------------------------------
-    # 21. Config for summary file
+    # 21. Reload best checkpoint
+    # --------------------------------------------------------
+
+    print("\n" + "=" * 70)
+    print("LOADING BEST MODEL")
+    print("=" * 70)
+
+    best_checkpoint = torch.load(
+        CHECKPOINT_PATH,
+        map_location=device
+    )
+
+    model.load_state_dict(
+        best_checkpoint[
+            "model_state_dict"
+        ]
+    )
+
+    model.eval()
+
+    print(
+        "Loaded best model from epoch:",
+        best_checkpoint["epoch"]
+    )
+
+
+    # --------------------------------------------------------
+    # 22. Greedy BLEU
+    # --------------------------------------------------------
+
+    print("\n" + "=" * 70)
+    print("GREEDY BLEU")
+    print("=" * 70)
+
+    greedy_bleu_start = time.time()
+
+    greedy_bleu = evaluate_bleu(
+        model=model,
+        dataset_subset=val_dataset,
+        german_vocab=german_vocab,
+        english_vocab=english_vocab,
+        translate_fn=translate_sentence,
+        method="greedy",
+        max_examples=BLEU_MAX_EXAMPLES,
+        max_len=MAX_LEN,
+        beam_size=BEAM_SIZE,
+        alpha=LENGTH_PENALTY_ALPHA
+    )
+
+    greedy_bleu_time = (
+        time.time()
+        - greedy_bleu_start
+    ) / 60
+
+    print(
+        f"Greedy BLEU: "
+        f"{greedy_bleu:.2f}"
+    )
+
+    print(
+        f"Greedy BLEU time: "
+        f"{greedy_bleu_time:.2f} min"
+    )
+
+
+    # --------------------------------------------------------
+    # 23. Beam BLEU
+    # --------------------------------------------------------
+
+    print("\n" + "=" * 70)
+    print("BEAM BLEU")
+    print("=" * 70)
+
+    beam_bleu_start = time.time()
+
+    beam_bleu = evaluate_bleu(
+        model=model,
+        dataset_subset=val_dataset,
+        german_vocab=german_vocab,
+        english_vocab=english_vocab,
+        translate_fn=translate_sentence,
+        method="beam",
+        max_examples=BLEU_MAX_EXAMPLES,
+        max_len=MAX_LEN,
+        beam_size=BEAM_SIZE,
+        alpha=LENGTH_PENALTY_ALPHA
+    )
+
+    beam_bleu_time = (
+        time.time()
+        - beam_bleu_start
+    ) / 60
+
+    print(
+        f"Beam BLEU: "
+        f"{beam_bleu:.2f}"
+    )
+
+    print(
+        f"Beam BLEU time: "
+        f"{beam_bleu_time:.2f} min"
+    )
+
+
+    # --------------------------------------------------------
+    # 24. Experiment configuration
     # --------------------------------------------------------
 
     experiment_config = {
@@ -736,43 +774,25 @@ def main():
 
 
     # --------------------------------------------------------
-    # 22. Save experiment summary
+    # 25. Save experiment summary
     # --------------------------------------------------------
 
     save_experiment_summary(
-
-        file_path=
-            summary_path,
-
-        experiment_name=
-            EXPERIMENT_NAME,
-
-        config=
-            experiment_config,
-
-        best_epoch=
-            best_epoch,
-
-        best_val_loss=
-            best_val_loss,
-
-        best_perplexity=
-            best_perplexity,
-
-        total_time_min=
-            total_time_min,
-
-        checkpoint_path=
-            CHECKPOINT_PATH,
-
-        greedy_bleu=None,
-
-        beam_bleu=None
+        file_path=summary_path,
+        experiment_name=EXPERIMENT_NAME,
+        config=experiment_config,
+        best_epoch=best_epoch,
+        best_val_loss=best_val_loss,
+        best_perplexity=best_perplexity,
+        total_time_min=total_time_min,
+        checkpoint_path=CHECKPOINT_PATH,
+        greedy_bleu=greedy_bleu,
+        beam_bleu=beam_bleu
     )
 
 
     # --------------------------------------------------------
-    # 23. Generate plots
+    # 26. Generate plots
     # --------------------------------------------------------
 
     print("\n" + "=" * 70)
@@ -780,24 +800,18 @@ def main():
     print("=" * 70)
 
     plot_paths = plot_training_history(
-
-        history_csv_path=
-            history_path,
-
-        output_dir=
-            PLOT_DIR,
-
-        experiment_name=
-            EXPERIMENT_NAME
+        history_csv_path=history_path,
+        output_dir=PLOT_DIR,
+        experiment_name=EXPERIMENT_NAME
     )
 
 
     # --------------------------------------------------------
-    # 24. Final report
+    # 27. Final report
     # --------------------------------------------------------
 
     print("\n" + "=" * 70)
-    print("TRAINING COMPLETE")
+    print("EXPERIMENT COMPLETE")
     print("=" * 70)
 
     print(
@@ -827,9 +841,43 @@ def main():
     )
 
     print(
-        "Total training time:",
+        "Greedy BLEU:",
+        round(
+            greedy_bleu,
+            2
+        )
+    )
+
+    print(
+        "Beam BLEU:",
+        round(
+            beam_bleu,
+            2
+        )
+    )
+
+    print(
+        "Training time:",
         round(
             total_time_min,
+            2
+        ),
+        "minutes"
+    )
+
+    print(
+        "Greedy BLEU time:",
+        round(
+            greedy_bleu_time,
+            2
+        ),
+        "minutes"
+    )
+
+    print(
+        "Beam BLEU time:",
+        round(
+            beam_bleu_time,
             2
         ),
         "minutes"
@@ -857,7 +905,7 @@ def main():
 
 
     print(
-        "\nEpoch history:"
+        "\nHistory:"
     )
 
     print(
@@ -866,7 +914,7 @@ def main():
 
 
     print(
-        "\nExperiment summary:"
+        "\nResults:"
     )
 
     print(
@@ -879,7 +927,9 @@ def main():
     )
 
     print(
-        plot_paths["loss_plot"]
+        plot_paths[
+            "loss_plot"
+        ]
     )
 
 
@@ -899,7 +949,9 @@ def main():
     )
 
     print(
-        plot_paths["time_plot"]
+        plot_paths[
+            "time_plot"
+        ]
     )
 
 
