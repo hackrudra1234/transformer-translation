@@ -4,6 +4,7 @@ import random
 import numpy as np
 import torch
 import torch.nn as nn
+import os
 
 from datasets import load_dataset
 from torch.utils.data import DataLoader
@@ -254,6 +255,11 @@ def main():
         # --------------------------------
         # 12. Save best checkpoint
         # --------------------------------
+
+        os.makedirs(
+           os.path.dirname(CHECKPOINT_PATH),
+          exist_ok=True
+                    )
         if val_loss < best_val_loss:
 
             best_val_loss = val_loss
