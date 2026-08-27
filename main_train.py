@@ -114,18 +114,10 @@ def main():
     # --------------------------------
     # 5. Build vocabulary
     # --------------------------------
-    vocab_data = build_vocab(
+    german_vocab,english_vocab = build_vocab(
         train_dataset,
         min_frequency=MIN_FREQUENCY
     )
-
-    german_vocab = vocab_data[
-        "german_vocab"
-    ]
-
-    english_vocab = vocab_data[
-        "english_vocab"
-    ]
 
     print(
         "German vocab:",
