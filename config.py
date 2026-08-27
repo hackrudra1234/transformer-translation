@@ -32,7 +32,7 @@ DROPOUT = 0.1
 # Training
 # -----------------------------
 LEARNING_RATE = 0.001
-EPOCHS = 1
+EPOCHS = 10
 
 
 # -----------------------------
@@ -47,4 +47,27 @@ LENGTH_PENALTY_ALPHA = 0.6
 # -----------------------------
 # Model saving
 # -----------------------------
-CHECKPOINT_PATH = "checkpoints/best_transformer.pt"
+EXPERIMENT_NAME = EXPERIMENT_NAME = (
+    f"d{D_MODEL}_"
+    f"h{NUM_HEADS}_"
+    f"enc{NUM_ENCODER_LAYERS}_"
+    f"dec{NUM_DECODER_LAYERS}_"
+    f"ff{D_FF}_"
+    f"bs{BATCH_SIZE}_"
+    f"lr{LEARNING_RATE}"
+)
+CHECKPOINT_PATH = (
+    "/content/drive/MyDrive/"
+    "transformer-translation/checkpoints/"
+    f"{EXPERIMENT_NAME}.pt"
+)
+
+EXPERIMENT_DIR = (
+    "/content/drive/MyDrive/"
+    "transformer-translation/experiments"
+)
+
+PLOT_DIR = (
+    "/content/drive/MyDrive/"
+    "transformer-translation/plots"
+)
