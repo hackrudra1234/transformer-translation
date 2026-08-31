@@ -19,7 +19,7 @@ VALIDATION_SIZE = 0.1
 # Model
 # -----------------------------
 D_MODEL = 128
-NUM_HEADS = 4
+NUM_HEADS = 8
 D_FF = 512
 
 NUM_ENCODER_LAYERS = 3
