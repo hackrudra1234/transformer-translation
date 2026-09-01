@@ -25,7 +25,7 @@ INITIALIZATION = "default"
 NUM_ENCODER_LAYERS = 4
 NUM_DECODER_LAYERS = 4
 
-DROPOUT = 0.1
+DROPOUT = 0.2
 
 # -----------------------------
 # Training
@@ -35,7 +35,7 @@ EPOCHS = 10
 LR_SCHEDULE = "constant"
 
 WARMUP_STEPS = 0
-LABEL_SMOOTHING = 0.1
+LABEL_SMOOTHING = 0.0
 
 # -----------------------------
 # Inference
