@@ -34,7 +34,7 @@ LEARNING_RATE = 0.001
 EPOCHS = 10
 LR_SCHEDULE = "constant"
 
-WARMUP_STEPS = 4000
+WARMUP_STEPS = 0
 LABEL_SMOOTHING = 0.1
 
 # -----------------------------
