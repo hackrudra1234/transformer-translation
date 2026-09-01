@@ -56,7 +56,7 @@ def save_experiment_summary(
     total_time_min,
     checkpoint_path,
     greedy_bleu=None,
-    beam_bleu=None
+    beam_bleu=None,
 ):
 
     os.makedirs(
@@ -88,6 +88,7 @@ def save_experiment_summary(
                     "dropout",
                     "learning_rate",
                     "batch_size",
+                    "initialization",
                     "best_epoch",
                     "best_val_loss",
                     "best_perplexity",
@@ -95,6 +96,7 @@ def save_experiment_summary(
                     "beam_bleu",
                     "total_time_min",
                     "checkpoint_path"
+                    
                 ]
             )
 
@@ -109,6 +111,7 @@ def save_experiment_summary(
                 config["dropout"],
                 config["learning_rate"],
                 config["batch_size"],
+                config["initialization"],
                 best_epoch,
                 best_val_loss,
                 best_perplexity,

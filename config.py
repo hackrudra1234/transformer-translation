@@ -21,12 +21,11 @@ VALIDATION_SIZE = 0.1
 D_MODEL = 256
 NUM_HEADS = 8
 D_FF = 1024
-
+INITIALIZATION = "xavier"
 NUM_ENCODER_LAYERS = 4
 NUM_DECODER_LAYERS = 4
 
 DROPOUT = 0.1
-
 
 # -----------------------------
 # Training
@@ -55,6 +54,7 @@ EXPERIMENT_NAME = EXPERIMENT_NAME = (
     f"ff{D_FF}_"
     f"bs{BATCH_SIZE}_"
     f"lr{LEARNING_RATE}"
+     f"init{INITIALIZATION}"
 )
 CHECKPOINT_PATH = (
     "/content/drive/MyDrive/"

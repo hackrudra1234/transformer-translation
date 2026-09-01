@@ -31,7 +31,8 @@ from config import (
     CHECKPOINT_PATH,
     EXPERIMENT_NAME,
     EXPERIMENT_DIR,
-    PLOT_DIR
+    PLOT_DIR,
+    INITIALIZATION
 )
 
 from data.data_utils import (
@@ -90,7 +91,25 @@ def main():
 
     set_seed(SEED)
 
+    def initialize_weights(model):
 
+        if INITIALIZATION == "xavier":
+
+            for parameter in model.parameters():
+
+                if parameter.dim() > 1:
+                    nn.init.xavier_uniform_(parameter)
+
+        elif INITIALIZATION == "default":
+
+        # Keep PyTorch default initialization
+            pass
+
+        else:
+
+            raise ValueError(
+            f"Unknown initialization: {INITIALIZATION}"
+            )
     # --------------------------------------------------------
     # 2. Device
     # --------------------------------------------------------
@@ -192,7 +211,7 @@ def main():
 
     summary_path = os.path.join(
         EXPERIMENT_DIR,
-        "results.csv"
+        "results_v2.csv"
     )
 
 
@@ -329,7 +348,7 @@ def main():
         num_decoder_layers=NUM_DECODER_LAYERS,
         dropout=DROPOUT
     )
-
+    initialize_weights(model)
     model = model.to(device)
 
 
@@ -402,6 +421,7 @@ def main():
 
     print("DROPOUT:", DROPOUT)
     print("BATCH SIZE:", BATCH_SIZE)
+    print( "INITIALIZATION:",INITIALIZATION)
     print("LEARNING RATE:", LEARNING_RATE)
     print("EPOCHS:", EPOCHS)
 
@@ -769,7 +789,9 @@ def main():
             LEARNING_RATE,
 
         "batch_size":
-            BATCH_SIZE
+            BATCH_SIZE,
+
+        "initialization": INITIALIZATION
     }
 
 
