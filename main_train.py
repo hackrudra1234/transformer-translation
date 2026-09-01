@@ -36,6 +36,7 @@ from config import (
     INITIALIZATION,
     LR_SCHEDULE,
     WARMUP_STEPS,
+    LABEL_SMOOTHING
 )
 
 from data.data_utils import (
@@ -400,7 +401,8 @@ def main():
     # --------------------------------------------------------
 
     loss_fn = nn.CrossEntropyLoss(
-        ignore_index=english_vocab["<pad>"]
+        ignore_index=english_vocab["<pad>"],
+        label_smoothing=LABEL_SMOOTHING
     )
 
 
@@ -468,6 +470,7 @@ def main():
     print("WARMUP STEPS:",WARMUP_STEPS)
     print("LEARNING RATE:", LEARNING_RATE)
     print("EPOCHS:", EPOCHS)
+    print("LABEL SMOOTHING:", LABEL_SMOOTHING)
 
     print(
         "BLEU MAX EXAMPLES:",
@@ -836,7 +839,10 @@ def main():
         "batch_size":
             BATCH_SIZE,
 
-        "initialization": INITIALIZATION
+        "initialization": INITIALIZATION,
+        "lr_schedule": LR_SCHEDULE,
+        "warmup_steps": WARMUP_STEPS,
+        "label_smoothing": LABEL_SMOOTHING
     }
 
 

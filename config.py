@@ -35,6 +35,7 @@ EPOCHS = 10
 LR_SCHEDULE = "transformer"
 
 WARMUP_STEPS = 4000
+LABEL_SMOOTHING = 0.1
 
 # -----------------------------
 # Inference
