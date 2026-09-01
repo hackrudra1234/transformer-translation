@@ -18,9 +18,9 @@ VALIDATION_SIZE = 0.1
 # -----------------------------
 # Model
 # -----------------------------
-D_MODEL = 256
+D_MODEL = 128
 NUM_HEADS = 8
-D_FF = 1024
+D_FF = 512
 INITIALIZATION = "xavier"
 NUM_ENCODER_LAYERS = 4
 NUM_DECODER_LAYERS = 4
