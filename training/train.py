@@ -5,7 +5,8 @@ def train_one_epoch(
     train_loader,
     optimizer,
     loss_fn,
-    device
+    device,
+    scheduler=None
 ):
 
     model.train()
@@ -82,7 +83,8 @@ def train_one_epoch(
         # Update parameters
         # -----------------------------
         optimizer.step()
-
+        if scheduler is not None:
+            scheduler.step()
 
         total_loss += loss.item()
 

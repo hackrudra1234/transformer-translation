@@ -32,7 +32,9 @@ DROPOUT = 0.1
 # -----------------------------
 LEARNING_RATE = 0.001
 EPOCHS = 10
+LR_SCHEDULE = "transformer"
 
+WARMUP_STEPS = 4000
 
 # -----------------------------
 # Inference
@@ -55,6 +57,7 @@ EXPERIMENT_NAME = EXPERIMENT_NAME = (
     f"bs{BATCH_SIZE}_"
     f"lr{LEARNING_RATE}"
      f"init{INITIALIZATION}"
+      f"sched{LR_SCHEDULE}"
 )
 CHECKPOINT_PATH = (
     "/content/drive/MyDrive/"

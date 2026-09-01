@@ -10,6 +10,7 @@ import torch.nn as nn
 
 from datasets import load_dataset
 from torch.utils.data import DataLoader
+from torchgen import model
 
 from config import (
     SEED,
@@ -32,7 +33,9 @@ from config import (
     EXPERIMENT_NAME,
     EXPERIMENT_DIR,
     PLOT_DIR,
-    INITIALIZATION
+    INITIALIZATION,
+    LR_SCHEDULE,
+    WARMUP_STEPS,
 )
 
 from data.data_utils import (
@@ -110,6 +113,20 @@ def main():
             raise ValueError(
             f"Unknown initialization: {INITIALIZATION}"
             )
+
+    def transformer_lr_lambda(step):
+
+        step = max(step, 1)
+
+        return (
+        D_MODEL ** (-0.5)
+        *
+        min(
+            step ** (-0.5),
+            step
+            * WARMUP_STEPS ** (-1.5)
+        )
+    )
     # --------------------------------------------------------
     # 2. Device
     # --------------------------------------------------------
@@ -391,9 +408,34 @@ def main():
     # 14. Optimizer
     # --------------------------------------------------------
 
-    optimizer = torch.optim.Adam(
+    if LR_SCHEDULE == "transformer":
+
+        optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=1.0,
+        betas=(0.9, 0.98),
+        eps=1e-9
+    )
+
+        scheduler = (
+        torch.optim.lr_scheduler.LambdaLR(
+            optimizer,
+            lr_lambda=transformer_lr_lambda
+        )
+    )
+
+    elif LR_SCHEDULE == "constant":
+
+        optimizer = torch.optim.Adam(
         model.parameters(),
         lr=LEARNING_RATE
+    )
+
+        scheduler = None
+
+    else:
+        raise ValueError(
+        f"Unknown LR schedule: {LR_SCHEDULE}"
     )
 
 
@@ -422,6 +464,8 @@ def main():
     print("DROPOUT:", DROPOUT)
     print("BATCH SIZE:", BATCH_SIZE)
     print( "INITIALIZATION:",INITIALIZATION)
+    print("LR SCHEDULE:",LR_SCHEDULE)
+    print("WARMUP STEPS:",WARMUP_STEPS)
     print("LEARNING RATE:", LEARNING_RATE)
     print("EPOCHS:", EPOCHS)
 
@@ -483,7 +527,8 @@ def main():
             train_loader=train_loader,
             optimizer=optimizer,
             loss_fn=loss_fn,
-            device=device
+            device=device,
+            scheduler=scheduler
         )
 
 
@@ -535,15 +580,15 @@ def main():
         # ----------------------------------------------------
         # Display epoch
         # ----------------------------------------------------
-
+        current_lr = optimizer.param_groups[0]["lr"]
         print(
-            f"Epoch "
-            f"{epoch + 1:02d}/{EPOCHS:02d} | "
-            f"Train Loss: {train_loss:.4f} | "
-            f"Val Loss: {val_loss:.4f} | "
-            f"PPL: {perplexity:.2f} | "
-            f"Time: {epoch_time_min:.2f} min"
-        )
+              f"Epoch {epoch + 1:02d}/{EPOCHS:02d} | "
+              f"Train Loss: {train_loss:.4f} | "
+              f"Val Loss: {val_loss:.4f} | "
+              f"PPL: {perplexity:.2f} | "
+              f"LR: {current_lr:.6f} | "
+              f"Time: {epoch_time_min:.2f} min"
+                            )
 
 
         # ----------------------------------------------------
