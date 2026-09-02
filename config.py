@@ -42,7 +42,7 @@ WEIGHT_TYING = False
 # -----------------------------
 # Inference
 # -----------------------------
-MAX_LEN = 60
+MAX_LEN = 80
 BLEU_MAX_EXAMPLES = 100
 BEAM_SIZE = 4
 LENGTH_PENALTY_ALPHA = 0.6
