@@ -478,20 +478,6 @@ User
 → English translation
 ```
 
-# PySpark Positioning
-
-PySpark was intentionally not used for the Transformer training loop. It would be more appropriate for large-scale upstream data engineering:
-
-```text
-Raw parallel data
-→ PySpark cleaning / filtering / deduplication
-→ SentencePiece
-→ PyTorch
-→ Transformer
-```
-
-For this ~51k-example dataset, PySpark would add unnecessary complexity.
-
 # Project Structure
 
 ```text
