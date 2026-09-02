@@ -19,7 +19,8 @@ class Transformer(nn.Module):
         d_ff,
         num_encoder_layers,
         num_decoder_layers,
-        dropout=0.1
+        dropout=0.1,
+        weight_tying=False
     ):
         super().__init__()
 
@@ -77,6 +78,15 @@ class Transformer(nn.Module):
             tgt_vocab_size
         )
 
+        # ----------------------------------------------------
+        # Weight tying
+        # ----------------------------------------------------
+
+        if weight_tying:
+
+            self.output_linear.weight = (
+                self.tgt_embedding.embedding.weight
+            )
 
     def forward(
         self,

@@ -36,7 +36,8 @@ from config import (
     INITIALIZATION,
     LR_SCHEDULE,
     WARMUP_STEPS,
-    LABEL_SMOOTHING
+    LABEL_SMOOTHING,
+    WEIGHT_TYING,
 )
 
 from data.data_utils import (
@@ -229,7 +230,7 @@ def main():
 
     summary_path = os.path.join(
         EXPERIMENT_DIR,
-        "results_v3.csv"
+        "results_v4.csv"
     )
 
 
@@ -364,7 +365,8 @@ def main():
         d_ff=D_FF,
         num_encoder_layers=NUM_ENCODER_LAYERS,
         num_decoder_layers=NUM_DECODER_LAYERS,
-        dropout=DROPOUT
+        dropout=DROPOUT,
+        weight_tying=WEIGHT_TYING
     )
     initialize_weights(model)
     model = model.to(device)
@@ -471,6 +473,7 @@ def main():
     print("LEARNING RATE:", LEARNING_RATE)
     print("EPOCHS:", EPOCHS)
     print("LABEL SMOOTHING:", LABEL_SMOOTHING)
+    print("WEIGHT TYING:",WEIGHT_TYING)
 
     print(
         "BLEU MAX EXAMPLES:",
@@ -653,6 +656,8 @@ def main():
                     "batch_size":
                         BATCH_SIZE
                 },
+                "weight_tying": WEIGHT_TYING,
+                
 
                 "train_loss":
                     train_loss,
@@ -842,7 +847,8 @@ def main():
         "initialization": INITIALIZATION,
         "lr_schedule": LR_SCHEDULE,
         "warmup_steps": WARMUP_STEPS,
-        "label_smoothing": LABEL_SMOOTHING
+        "label_smoothing": LABEL_SMOOTHING,
+         "weight_tying": WEIGHT_TYING
     }
 
 

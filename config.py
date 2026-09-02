@@ -36,6 +36,7 @@ LR_SCHEDULE = "constant"
 
 WARMUP_STEPS = 0
 LABEL_SMOOTHING = 0.0
+WEIGHT_TYING = True
 
 # -----------------------------
 # Inference
@@ -57,8 +58,9 @@ EXPERIMENT_NAME = EXPERIMENT_NAME = (
     f"ff{D_FF}_"
     f"bs{BATCH_SIZE}_"
     f"lr{LEARNING_RATE}"
-     f"init{INITIALIZATION}"
-      f"sched{LR_SCHEDULE}"
+    f"init{INITIALIZATION}"
+    f"sched{LR_SCHEDULE}"
+    f"tie{WEIGHT_TYING}"
 )
 CHECKPOINT_PATH = (
     "/content/drive/MyDrive/"
