@@ -13,6 +13,8 @@ from torch.utils.data import DataLoader
 from torchgen import model
 from data.bpe_tokenizers import load_bpe_tokenizer
 from data.data_utils import create_bpe_collate_fn
+from inference.greedy import greedy_decode_bpe
+from inference.beam import beam_search_decode_bpe
 
 from config import (
     SEED,
@@ -780,7 +782,7 @@ def main():
         model=model,
         dataset_subset=val_dataset,
         tokenizer=tokenizer,
-        translate_fn=translate_sentence,
+        translate_fn=greedy_decode_bpe,
         method="greedy",
         max_examples=BLEU_MAX_EXAMPLES,
         max_len=MAX_LEN,
@@ -818,7 +820,7 @@ def main():
         model=model,
         dataset_subset=val_dataset,
         tokenizer=tokenizer,
-        translate_fn=translate_sentence,
+        translate_fn=beam_search_decode_bpe,
         method="beam",
         max_examples=BLEU_MAX_EXAMPLES,
         max_len=MAX_LEN,
