@@ -54,7 +54,7 @@ ADAM_EPS = 1e-9
 # Model saving
 # -----------------------------
 EXPERIMENT_NAME = EXPERIMENT_NAME = (
-    f"bpe16k_"
+    f"bpe{BPE_VOCAB_SIZE}_"
     f"d{D_MODEL}_"
     f"h{NUM_HEADS}_"
     f"enc{NUM_ENCODER_LAYERS}_"

@@ -44,7 +44,8 @@ from config import (
     WEIGHT_TYING,
     ADAM_BETA1,
     ADAM_BETA2,
-    ADAM_EPS
+    ADAM_EPS,
+    BPE_VOCAB_SIZE
 )
 
 from data.data_utils import (
@@ -307,8 +308,8 @@ def main():
     #     "English vocab:",
     #     len(english_vocab)
     # )
-
-    BPE_MODEL_PATH = "data/bpe_shared.model"
+    BPE_MODEL_PREFIX = f"data/bpe_shared_{BPE_VOCAB_SIZE // 1000}k"
+    BPE_MODEL_PATH = BPE_MODEL_PREFIX + ".model"
 
     tokenizer = load_bpe_tokenizer(
     BPE_MODEL_PATH
