@@ -25,7 +25,7 @@ INITIALIZATION = "default"
 NUM_ENCODER_LAYERS = 4
 NUM_DECODER_LAYERS = 4
 
-DROPOUT = 0.2
+DROPOUT = 0.05
 
 # -----------------------------
 # Training
