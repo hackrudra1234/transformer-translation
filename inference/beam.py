@@ -202,3 +202,191 @@ def beam_search_decode(
     )
 
     return best_sequence
+
+import torch
+import torch.nn.functional as F
+
+
+def beam_search_decode_bpe(
+    model,
+    sentence,
+    tokenizer,
+    device,
+    max_len=40,
+    beam_size=4,
+    alpha=0.6
+):
+    model.eval()
+
+    # -----------------------------------------
+    # Encode German sentence using BPE
+    # -----------------------------------------
+
+    src_ids = tokenizer.encode(
+        sentence,
+        out_type=int
+    )
+
+    src_ids = [
+        tokenizer.bos_id()
+    ] + src_ids + [
+        tokenizer.eos_id()
+    ]
+
+    src = torch.tensor(
+        src_ids,
+        dtype=torch.long,
+        device=device
+    ).unsqueeze(0)
+
+    src_mask = (
+        src != tokenizer.pad_id()
+    ).unsqueeze(1).unsqueeze(2)
+
+    # Each beam:
+    # (generated_token_ids, cumulative_log_probability)
+
+    beams = [
+        (
+            [tokenizer.bos_id()],
+            0.0
+        )
+    ]
+
+    completed_beams = []
+
+    with torch.no_grad():
+
+        for _ in range(max_len):
+
+            candidates = []
+
+            for sequence, score in beams:
+
+                # Already finished
+                if sequence[-1] == tokenizer.eos_id():
+
+                    completed_beams.append(
+                        (sequence, score)
+                    )
+
+                    continue
+
+                tgt = torch.tensor(
+                    [sequence],
+                    dtype=torch.long,
+                    device=device
+                )
+
+                tgt_len = tgt.size(1)
+
+                causal_mask = torch.tril(
+                    torch.ones(
+                        tgt_len,
+                        tgt_len,
+                        dtype=torch.bool,
+                        device=device
+                    )
+                ).unsqueeze(0).unsqueeze(1)
+
+                tgt_padding_mask = (
+                    tgt != tokenizer.pad_id()
+                ).unsqueeze(1).unsqueeze(2)
+
+                tgt_mask = (
+                    tgt_padding_mask
+                    & causal_mask
+                )
+
+                logits, _, _, _ = model(
+                    src,
+                    tgt,
+                    src_mask,
+                    tgt_mask
+                )
+
+                log_probs = F.log_softmax(
+                    logits[:, -1, :],
+                    dim=-1
+                )
+
+                top_log_probs, top_ids = torch.topk(
+                    log_probs,
+                    beam_size,
+                    dim=-1
+                )
+
+                for i in range(beam_size):
+
+                    next_token = (
+                        top_ids[0, i].item()
+                    )
+
+                    next_score = (
+                        score
+                        + top_log_probs[0, i].item()
+                    )
+
+                    candidates.append(
+                        (
+                            sequence + [next_token],
+                            next_score
+                        )
+                    )
+
+            if not candidates:
+                break
+
+            # -----------------------------------------
+            # Length penalty
+            # -----------------------------------------
+
+            def normalized_score(item):
+
+                sequence, score = item
+
+                length = len(sequence)
+
+                length_penalty = (
+                    (5 + length) / 6
+                ) ** alpha
+
+                return (
+                    score / length_penalty
+                )
+
+            candidates.sort(
+                key=normalized_score,
+                reverse=True
+            )
+
+            beams = candidates[:beam_size]
+
+    completed_beams.extend(beams)
+
+    # Pick best final beam
+    best_sequence, _ = max(
+        completed_beams,
+        key=lambda item:
+        item[1]
+        /
+        (
+            ((5 + len(item[0])) / 6)
+            ** alpha
+        )
+    )
+
+    # Remove special tokens
+    output_ids = [
+        token_id
+        for token_id in best_sequence
+        if token_id not in [
+            tokenizer.bos_id(),
+            tokenizer.eos_id(),
+            tokenizer.pad_id()
+        ]
+    ]
+
+    return tokenizer.decode(
+        output_ids
+    )

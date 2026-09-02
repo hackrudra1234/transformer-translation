@@ -11,6 +11,8 @@ import torch.nn as nn
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 from torchgen import model
+from data.bpe_tokenizers import load_bpe_tokenizer
+from data.data_utils import create_bpe_collate_fn
 
 from config import (
     SEED,
@@ -55,7 +57,7 @@ from training.evaluate import evaluate_model
 
 from training.metrics import (
     calculate_perplexity,
-    evaluate_bleu
+    evaluate_bleu_bpe
 )
 
 from inference.translate import (
@@ -233,7 +235,7 @@ def main():
 
     summary_path = os.path.join(
         EXPERIMENT_DIR,
-        "results_v5.csv"
+        "results_v6.csv"
     )
 
 
@@ -289,31 +291,43 @@ def main():
     print("BUILDING VOCABULARY")
     print("=" * 70)
 
-    german_vocab, english_vocab = build_vocab(
-        train_dataset,
-        min_frequency=MIN_FREQUENCY
-    )
+    # german_vocab, english_vocab = build_vocab(
+    #     train_dataset,
+    #     min_frequency=MIN_FREQUENCY
+    # )
 
-    print(
-        "German vocab:",
-        len(german_vocab)
-    )
+    # print(
+    #     "German vocab:",
+    #     len(german_vocab)
+    # )
 
-    print(
-        "English vocab:",
-        len(english_vocab)
-    )
+    # print(
+    #     "English vocab:",
+    #     len(english_vocab)
+    # )
+
+    BPE_MODEL_PATH = "data/bpe_shared.model"
+
+    tokenizer = load_bpe_tokenizer(
+    BPE_MODEL_PATH
+)
+
+    vocab_size = tokenizer.get_piece_size()
+
+    print("BPE vocabulary size:", vocab_size)
 
 
     # --------------------------------------------------------
     # 9. Collate function
     # --------------------------------------------------------
 
-    collate_fn = create_collate_fn(
-        german_vocab,
-        english_vocab
-    )
-
+    # collate_fn = create_collate_fn(
+    #     german_vocab,
+    #     english_vocab
+    # )
+    collate_fn = create_bpe_collate_fn(
+    tokenizer
+)
 
     # --------------------------------------------------------
     # 10. DataLoaders
@@ -327,7 +341,7 @@ def main():
         train_dataset,
         batch_size=BATCH_SIZE,
         shuffle=True,
-        collate_fn=collate_fn,
+        collate_fn=create_bpe_collate_fn,
         num_workers=2,
         pin_memory=pin_memory
     )
@@ -336,7 +350,7 @@ def main():
         val_dataset,
         batch_size=BATCH_SIZE,
         shuffle=False,
-        collate_fn=collate_fn,
+        collate_fn=create_bpe_collate_fn,
         num_workers=2,
         pin_memory=pin_memory
     )
@@ -361,8 +375,8 @@ def main():
     print("=" * 70)
 
     model = Transformer(
-        src_vocab_size=len(german_vocab),
-        tgt_vocab_size=len(english_vocab),
+        src_vocab_size=vocab_size,
+        tgt_vocab_size=vocab_size,
         d_model=D_MODEL,
         num_heads=NUM_HEADS,
         d_ff=D_FF,
@@ -406,7 +420,7 @@ def main():
     # --------------------------------------------------------
 
     loss_fn = nn.CrossEntropyLoss(
-        ignore_index=english_vocab["<pad>"],
+        ignore_index=tokenizer.pad_id(),
         label_smoothing=LABEL_SMOOTHING
     )
 
@@ -632,11 +646,12 @@ def main():
                 "optimizer_state_dict":
                     optimizer.state_dict(),
 
-                "german_vocab":
-                    german_vocab,
+                "bpe_model_path":
+                    BPE_MODEL_PATH,
 
-                "english_vocab":
-                    english_vocab,
+                "bpe_vocab_size":
+                tokenizer.get_piece_size(),
+
 
                 "config": {
 
@@ -667,6 +682,11 @@ def main():
                 "adam_beta1": ADAM_BETA1,
                 "adam_beta2": ADAM_BETA2,
                 "adam_eps": ADAM_EPS,
+                 "tokenizer_type":
+                "sentencepiece_bpe",
+
+                "bpe_vocab_size":
+                tokenizer.get_piece_size(),
                 },
                 "train_loss":
                     train_loss,
@@ -755,11 +775,10 @@ def main():
 
     greedy_bleu_start = time.time()
 
-    greedy_bleu = evaluate_bleu(
+    greedy_bleu = evaluate_bleu_bpe(
         model=model,
         dataset_subset=val_dataset,
-        german_vocab=german_vocab,
-        english_vocab=english_vocab,
+        tokenizer=tokenizer,
         translate_fn=translate_sentence,
         method="greedy",
         max_examples=BLEU_MAX_EXAMPLES,
@@ -794,11 +813,10 @@ def main():
 
     beam_bleu_start = time.time()
 
-    beam_bleu = evaluate_bleu(
+    beam_bleu = evaluate_bleu_bpe(
         model=model,
         dataset_subset=val_dataset,
-        german_vocab=german_vocab,
-        english_vocab=english_vocab,
+        tokenizer=tokenizer,
         translate_fn=translate_sentence,
         method="beam",
         max_examples=BLEU_MAX_EXAMPLES,

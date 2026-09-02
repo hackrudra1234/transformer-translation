@@ -120,3 +120,104 @@ def greedy_decode(
                 break
 
     return generated
+
+def greedy_decode_bpe(
+    model,
+    sentence,
+    tokenizer,
+    device,
+    max_len=40
+):
+    model.eval()
+
+    src_ids = tokenizer.encode(
+        sentence,
+        out_type=int
+    )
+
+    src_ids = [
+        tokenizer.bos_id()
+    ] + src_ids + [
+        tokenizer.eos_id()
+    ]
+
+    src = torch.tensor(
+        src_ids,
+        dtype=torch.long,
+        device=device
+    ).unsqueeze(0)
+
+    src_mask = (
+        src != tokenizer.pad_id()
+    ).unsqueeze(1).unsqueeze(2)
+
+    generated = torch.tensor(
+        [[tokenizer.bos_id()]],
+        dtype=torch.long,
+        device=device
+    )
+
+    with torch.no_grad():
+
+        for _ in range(max_len):
+
+            tgt_len = generated.size(1)
+
+            causal_mask = torch.tril(
+                torch.ones(
+                    tgt_len,
+                    tgt_len,
+                    dtype=torch.bool,
+                    device=device
+                )
+            ).unsqueeze(0).unsqueeze(1)
+
+            tgt_padding_mask = (
+                generated != tokenizer.pad_id()
+            ).unsqueeze(1).unsqueeze(2)
+
+            tgt_mask = (
+                tgt_padding_mask
+                & causal_mask
+            )
+
+            logits, _, _, _ = model(
+                src,
+                generated,
+                src_mask,
+                tgt_mask
+            )
+
+            next_token = (
+                logits[:, -1, :]
+                .argmax(dim=-1)
+                .item()
+            )
+
+            generated = torch.cat(
+                [
+                    generated,
+                    torch.tensor(
+                        [[next_token]],
+                        device=device
+                    )
+                ],
+                dim=1
+            )
+
+            if next_token == tokenizer.eos_id():
+                break
+
+    output_ids = generated[0].tolist()
+
+    output_ids = [
+        token_id
+        for token_id in output_ids
+        if token_id not in [
+            tokenizer.bos_id(),
+            tokenizer.eos_id(),
+            tokenizer.pad_id()
+        ]
+    ]
+
+    return tokenizer.decode(output_ids)
