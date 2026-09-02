@@ -38,6 +38,9 @@ from config import (
     WARMUP_STEPS,
     LABEL_SMOOTHING,
     WEIGHT_TYING,
+    ADAM_BETA1,
+    ADAM_BETA2,
+    ADAM_EPS
 )
 
 from data.data_utils import (
@@ -230,7 +233,7 @@ def main():
 
     summary_path = os.path.join(
         EXPERIMENT_DIR,
-        "results_v4.csv"
+        "results_v5.csv"
     )
 
 
@@ -432,7 +435,9 @@ def main():
 
         optimizer = torch.optim.Adam(
         model.parameters(),
-        lr=LEARNING_RATE
+        lr=LEARNING_RATE,
+        betas=(ADAM_BETA1, ADAM_BETA2),
+        eps=ADAM_EPS
     )
 
         scheduler = None
@@ -474,6 +479,9 @@ def main():
     print("EPOCHS:", EPOCHS)
     print("LABEL SMOOTHING:", LABEL_SMOOTHING)
     print("WEIGHT TYING:",WEIGHT_TYING)
+    print("ADAM BETA1:", ADAM_BETA1)
+    print("ADAM BETA2:", ADAM_BETA2)
+    print("ADAM EPS:", ADAM_EPS)
 
     print(
         "BLEU MAX EXAMPLES:",
@@ -654,11 +662,12 @@ def main():
                         LEARNING_RATE,
 
                     "batch_size":
-                        BATCH_SIZE
-                },
+                        BATCH_SIZE,
                 "weight_tying": WEIGHT_TYING,
-                
-
+                "adam_beta1": ADAM_BETA1,
+                "adam_beta2": ADAM_BETA2,
+                "adam_eps": ADAM_EPS,
+                },
                 "train_loss":
                     train_loss,
 
@@ -848,7 +857,10 @@ def main():
         "lr_schedule": LR_SCHEDULE,
         "warmup_steps": WARMUP_STEPS,
         "label_smoothing": LABEL_SMOOTHING,
-         "weight_tying": WEIGHT_TYING
+         "weight_tying": WEIGHT_TYING,
+         "adam_beta1": ADAM_BETA1,
+         "adam_beta2": ADAM_BETA2,
+        "adam_eps": ADAM_EPS
     }
 
 

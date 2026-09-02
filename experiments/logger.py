@@ -93,6 +93,9 @@ def save_experiment_summary(
                     "lr_schedule",
                     "warmup_steps",
                     "label_smoothing",
+                    "adam_beta1",
+                    "adam_beta2",
+                    "adam_eps",
                     "best_epoch",
                     "best_val_loss",
                     "best_perplexity",
@@ -100,6 +103,7 @@ def save_experiment_summary(
                     "beam_bleu",
                     "total_time_min",
                     "checkpoint_path"
+                    
                     
                 ]
             )
@@ -120,6 +124,9 @@ def save_experiment_summary(
                 config["lr_schedule"],
                 config["warmup_steps"],
                 config["label_smoothing"],
+                config["adam_beta1"],
+                config["adam_beta2"],
+                config["adam_eps"],
                 best_epoch,
                 best_val_loss,
                 best_perplexity,

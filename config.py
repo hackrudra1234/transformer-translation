@@ -36,7 +36,7 @@ LR_SCHEDULE = "constant"
 
 WARMUP_STEPS = 0
 LABEL_SMOOTHING = 0.0
-WEIGHT_TYING = True
+WEIGHT_TYING = False
 
 # -----------------------------
 # Inference
@@ -45,7 +45,9 @@ MAX_LEN = 40
 BLEU_MAX_EXAMPLES = 100
 BEAM_SIZE = 4
 LENGTH_PENALTY_ALPHA = 0.6
-
+ADAM_BETA1 = 0.9
+ADAM_BETA2 = 0.98
+ADAM_EPS = 1e-9
 
 # -----------------------------
 # Model saving
@@ -61,6 +63,10 @@ EXPERIMENT_NAME = EXPERIMENT_NAME = (
     f"init{INITIALIZATION}"
     f"sched{LR_SCHEDULE}"
     f"tie{WEIGHT_TYING}"
+    f"b1{ADAM_BETA1}_"
+    f"b2{ADAM_BETA2}_"
+    f"eps{ADAM_EPS}"
+
 )
 CHECKPOINT_PATH = (
     "/content/drive/MyDrive/"
