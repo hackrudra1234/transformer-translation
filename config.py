@@ -26,6 +26,7 @@ NUM_ENCODER_LAYERS = 4
 NUM_DECODER_LAYERS = 4
 
 DROPOUT = 0.1
+BPE_VOCAB_SIZE = 16000
 
 # -----------------------------
 # Training
