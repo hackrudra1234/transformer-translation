@@ -30,7 +30,7 @@ DROPOUT = 0.1
 # -----------------------------
 # Training
 # -----------------------------
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.0005
 EPOCHS = 10
 LR_SCHEDULE = "constant"
 
