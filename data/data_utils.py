@@ -103,6 +103,150 @@ def encode_sentence(
         ids,
         dtype=torch.long
     )
+import torch
+from torch.nn.utils.rnn import pad_sequence
+
+
+def encode_sentence_bpe(sentence, tokenizer):
+    """
+    Convert a raw sentence directly into SentencePiece BPE IDs.
+
+    Adds:
+    <bos> at the beginning
+    <eos> at the end
+    """
+
+    ids = tokenizer.encode(
+        sentence,
+        out_type=int
+    )
+
+    ids = [
+        tokenizer.bos_id()
+    ] + ids + [
+        tokenizer.eos_id()
+    ]
+
+    return torch.tensor(
+        ids,
+        dtype=torch.long
+    )
+def create_bpe_collate_fn(tokenizer):
+
+    pad_id = tokenizer.pad_id()
+
+    def collate_fn(batch):
+
+        src_sequences = []
+        decoder_sequences = []
+        target_sequences = []
+
+        for example in batch:
+
+            german = example["translation"]["de"]
+            english = example["translation"]["en"]
+
+            # German source
+            src = encode_sentence_bpe(
+                german,
+                tokenizer
+            )
+
+            # English target
+            tgt = encode_sentence_bpe(
+                english,
+                tokenizer
+            )
+
+            src_sequences.append(src)
+
+            # Decoder input:
+            # <bos> I am happy
+            decoder_sequences.append(
+                tgt[:-1]
+            )
+
+            # Expected target:
+            # I am happy <eos>
+            target_sequences.append(
+                tgt[1:]
+            )
+
+        # ----------------------------
+        # Padding
+        # ----------------------------
+
+        src_batch = pad_sequence(
+            src_sequences,
+            batch_first=True,
+            padding_value=pad_id
+        )
+
+        decoder_batch = pad_sequence(
+            decoder_sequences,
+            batch_first=True,
+            padding_value=pad_id
+        )
+
+        target_batch = pad_sequence(
+            target_sequences,
+            batch_first=True,
+            padding_value=pad_id
+        )
+
+        # ----------------------------
+        # Source padding mask
+        # ----------------------------
+
+        src_mask = (
+            src_batch != pad_id
+        ).unsqueeze(1).unsqueeze(2)
+
+        # shape:
+        # [batch, 1, 1, src_len]
+
+        # ----------------------------
+        # Target padding mask
+        # ----------------------------
+
+        tgt_padding_mask = (
+            decoder_batch != pad_id
+        ).unsqueeze(1).unsqueeze(2)
+
+        tgt_len = decoder_batch.size(1)
+
+        # ----------------------------
+        # Causal mask
+        # ----------------------------
+
+        causal_mask = torch.tril(
+            torch.ones(
+                tgt_len,
+                tgt_len,
+                dtype=torch.bool
+            )
+        )
+
+        causal_mask = causal_mask.unsqueeze(0).unsqueeze(1)
+
+        # shape:
+        # [1, 1, tgt_len, tgt_len]
+
+        # combine both masks
+        tgt_mask = (
+            tgt_padding_mask
+            & causal_mask
+        )
+
+        return {
+            "src": src_batch,
+            "decoder_input": decoder_batch,
+            "target": target_batch,
+            "src_mask": src_mask,
+            "tgt_mask": tgt_mask
+        }
+
+    return collate_fn
 
 def create_collate_fn(
     german_vocab,
