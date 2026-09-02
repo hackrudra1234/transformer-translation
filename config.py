@@ -10,7 +10,7 @@ SEED = 42
 # -----------------------------
 # Data
 # -----------------------------
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 MIN_FREQUENCY = 2
 VALIDATION_SIZE = 0.1
 
@@ -25,7 +25,7 @@ INITIALIZATION = "default"
 NUM_ENCODER_LAYERS = 4
 NUM_DECODER_LAYERS = 4
 
-DROPOUT = 0.05
+DROPOUT = 0.1
 
 # -----------------------------
 # Training
