@@ -31,7 +31,7 @@ DROPOUT = 0.1
 # Training
 # -----------------------------
 LEARNING_RATE = 0.00075
-EPOCHS = 15
+EPOCHS = 20
 LR_SCHEDULE = "constant"
 
 WARMUP_STEPS = 0
