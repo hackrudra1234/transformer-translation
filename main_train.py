@@ -11,7 +11,7 @@ import torch.nn as nn
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 from torchgen import model
-from data.bpe_tokenizers import load_bpe_tokenizer
+from data.bpe_tokenizers import load_bpe_tokenizer,train_bpe_tokenizer
 from data.data_utils import create_bpe_collate_fn
 from inference.greedy import greedy_decode_bpe
 from inference.beam import beam_search_decode_bpe
@@ -308,9 +308,37 @@ def main():
     #     "English vocab:",
     #     len(english_vocab)
     # )
-    BPE_MODEL_PREFIX = f"data/bpe_shared_{BPE_VOCAB_SIZE // 1000}k"
-    BPE_MODEL_PATH = BPE_MODEL_PREFIX + ".model"
+    import os
 
+    BPE_MODEL_PREFIX = (
+    f"data/bpe_shared_{BPE_VOCAB_SIZE // 1000}k"
+)
+
+    BPE_MODEL_PATH = (
+    BPE_MODEL_PREFIX + ".model"
+)
+
+    if not os.path.exists(BPE_MODEL_PATH):
+
+        print(
+        f"BPE tokenizer not found. "
+        f"Training {BPE_VOCAB_SIZE} vocabulary tokenizer..."
+    )
+
+    train_bpe_tokenizer(
+        train_dataset=train_dataset,
+        model_prefix=BPE_MODEL_PREFIX,
+        vocab_size=BPE_VOCAB_SIZE
+    )
+
+    tokenizer = load_bpe_tokenizer(
+    BPE_MODEL_PATH
+)
+
+    print(
+    "Actual BPE vocabulary size:",
+    tokenizer.get_piece_size()
+)
     tokenizer = load_bpe_tokenizer(
     BPE_MODEL_PATH
 )
