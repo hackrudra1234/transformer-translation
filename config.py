@@ -10,7 +10,7 @@ SEED = 42
 # -----------------------------
 # Data
 # -----------------------------
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 MIN_FREQUENCY = 2
 VALIDATION_SIZE = 0.1
 
