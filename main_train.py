@@ -325,6 +325,7 @@ def main():
     #     german_vocab,
     #     english_vocab
     # )
+
     collate_fn = create_bpe_collate_fn(
     tokenizer
 )
@@ -341,7 +342,7 @@ def main():
         train_dataset,
         batch_size=BATCH_SIZE,
         shuffle=True,
-        collate_fn=create_bpe_collate_fn,
+        collate_fn=collate_fn,
         num_workers=2,
         pin_memory=pin_memory
     )
@@ -350,7 +351,7 @@ def main():
         val_dataset,
         batch_size=BATCH_SIZE,
         shuffle=False,
-        collate_fn=create_bpe_collate_fn,
+        collate_fn=collate_fn,
         num_workers=2,
         pin_memory=pin_memory
     )
