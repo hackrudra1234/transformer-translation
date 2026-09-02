@@ -308,7 +308,7 @@ def main():
     #     "English vocab:",
     #     len(english_vocab)
     # )
-    import os
+
 
     BPE_MODEL_PREFIX = (
     f"data/bpe_shared_{BPE_VOCAB_SIZE // 1000}k"
