@@ -243,6 +243,9 @@ def beam_search_decode_bpe(
         src != tokenizer.pad_id()
     ).unsqueeze(1).unsqueeze(2)
 
+    with torch.inference_mode():
+        encoder_output, _ = model.encode(src, src_mask)
+
     # Each beam:
     # (generated_token_ids, cumulative_log_probability)
 
@@ -255,9 +258,9 @@ def beam_search_decode_bpe(
 
     completed_beams = []
 
-    with torch.no_grad():
+   # with torch.no_grad():
 
-        for _ in range(max_len):
+    for _ in range(max_len):
 
             candidates = []
 
@@ -298,12 +301,14 @@ def beam_search_decode_bpe(
                     & causal_mask
                 )
 
-                logits, _, _, _ = model(
-                    src,
+                logits, _, _ = model.decode(
                     tgt,
-                    src_mask,
-                    tgt_mask
+                    encoder_output,
+                    tgt_mask,
+                    src_mask
                 )
+
+                next_token_logits = logits[:, -1, :]
 
                 log_probs = F.log_softmax(
                     logits[:, -1, :],

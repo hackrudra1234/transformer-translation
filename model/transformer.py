@@ -87,45 +87,33 @@ class Transformer(nn.Module):
             self.output_linear.weight = (
                 self.tgt_embedding.embedding.weight
             )
+    # =========================================================
+    # ENCODER
+    # =========================================================
 
-    def forward(
-        self,
-        src,
-        tgt,
-        src_mask=None,
-        tgt_mask=None
-    ):
-
-        # =====================================================
-        # 1. Source side
-        # =====================================================
-
+    def encode(self, src, src_mask=None):
         src_x = self.src_embedding(src)
 
         src_x = self.position_encoding(
             src_x
         )
 
-        encoder_output, encoder_attention = self.encoder(
+        (encoder_output, encoder_attention) = self.encoder(
             src_x,
             src_mask
         )
 
+        return encoder_output, encoder_attention
+    # =========================================================
+    # DECODER
+    # =========================================================
 
-        # =====================================================
-        # 2. Target side
-        # =====================================================
-
+    def decode(self, tgt, encoder_output, tgt_mask=None, src_mask=None):
         tgt_x = self.tgt_embedding(tgt)
 
         tgt_x = self.position_encoding(
             tgt_x
         )
-
-
-        # =====================================================
-        # 3. Decoder
-        # =====================================================
 
         (
             decoder_output,
@@ -137,20 +125,28 @@ class Transformer(nn.Module):
             tgt_mask,
             src_mask
         )
-
-
-        # =====================================================
-        # 4. Vocabulary logits
-        # =====================================================
-
-        logits = self.output_linear(
-            decoder_output
-        )
+        logits = self.output_linear(decoder_output)
 
 
         return (
             logits,
-            encoder_attention,
             decoder_self_attention,
             decoder_cross_attention
+        )
+
+    def forward(
+        self,
+        src,
+        tgt,
+        src_mask=None,
+        tgt_mask=None
+    ):
+
+
+        (encoder_output, encoder_attention) = self.encode(src, src_mask)
+
+        (logits, decoder_self_attention, decoder_cross_attention) = self.decode(
+            tgt,encoder_output, tgt_mask, src_mask)
+
+        return (logits, encoder_attention, decoder_self_attention, decoder_cross_attention
         )
