@@ -455,35 +455,101 @@ Potential next steps include:
 - using larger model capacity after increasing data size
 - adding COMET or chrF alongside BLEU
 - investigating repetition penalties or constrained decoding
-- source-encoder caching during autoregressive inference
 - batched beam search
-- FastAPI deployment
+- cloud deployment of the Dockerized API
 - ONNX/TorchScript optimization where appropriate
 - W&B or MLflow experiment tracking
 
-# Deployment Notes
+# Deployment
 
-Training benefits strongly from GPU because it requires forward pass, backward pass, gradients, and optimizer states.
+The trained Transformer has now been converted into a local deployable service using **FastAPI and Docker**.
 
-Inference is much lighter and can run on CPU for low-volume usage.
+Training benefits strongly from GPU because it requires forward pass, backward pass, gradients, and optimizer states. Inference is much lighter and can run on CPU for low-volume usage.
 
-Possible deployment flow:
+## Inference Optimization
+
+The original beam-search inference called the full Transformer repeatedly while generating the target sentence. This meant the same German source sentence was encoded again at every decoding step.
+
+For deployment, the Transformer was refactored to expose separate `encode()` and `decode()` methods.
 
 ```text
-User
-→ FastAPI
-→ SentencePiece BPE
-→ trained Transformer
-→ greedy / beam decoder
-→ English translation
+German sentence
+→ encoder once
+→ save encoder output
+→ decoder step 1
+→ decoder step 2
+→ decoder step 3
+→ ...
 ```
+
+The source representation is therefore reused during autoregressive generation. This improves inference efficiency without changing the trained weights or requiring retraining.
+
+## FastAPI
+
+The model is served through a FastAPI application.
+
+Main endpoint:
+
+```text
+POST /translate
+```
+
+Example request:
+
+```json
+{
+  "text": "Es war ganz unmöglich, an diesem Tage einen Spaziergang zu machen."
+}
+```
+
+Response structure:
+
+```json
+{
+  "source": "Es war ganz unmöglich, an diesem Tage einen Spaziergang zu machen.",
+  "translation": "..."
+}
+```
+
+The checkpoint and tokenizer are loaded once when the API starts and reused across requests.
+
+FastAPI's interactive API documentation is available at:
+
+```text
+/docs
+```
+
+when the service is running.
+
+## Docker
+
+The FastAPI service was containerized with Docker so the application can run in a consistent environment.
+
+The Docker image contains the application runtime and dependencies such as:
+
+- Python
+- PyTorch
+- FastAPI
+- Uvicorn
+- SentencePiece
+- NumPy
+- Transformer model code
+- inference code
+
+The trained checkpoint and tokenizer are kept as separate model artifacts and mounted into the container instead of being tied to a machine-specific path.
+
 
 # Project Structure
 
 ```text
 transformer-translation/
+├── app/
+│   ├── __init__.py
+│   ├── api.py
+│   └── model_service.py
 ├── config.py
 ├── main_train.py
+├── test_deployment.py
 ├── data/
 │   ├── data_utils.py
 │   └── bpe_tokenizers.py
@@ -508,6 +574,10 @@ transformer-translation/
 │   └── plotting.py
 ├── notebooks/
 │   └── evaluate.ipynb
+├── checkpoints/
+├── tokenizers/
+├── Dockerfile
+├── .dockerignore
 ├── pyproject.toml
 ├── requirements.txt
 └── README.md
@@ -519,4 +589,6 @@ A complete German-to-English Transformer translation system was implemented from
 
 The strongest final setup used an 8k shared SentencePiece BPE vocabulary, a compact 4-layer encoder/decoder Transformer, and tuned beam-search decoding. The best observed Beam BLEU was approximately **4.8005**.
 
-The project also identified the primary remaining limitation: the model learned readable target-language patterns more effectively than precise German-to-English semantic alignment. Rather than continuing minor hyperparameter tuning, the logical next improvement would be substantially more and more diverse parallel training data.
+The project was then extended beyond model experimentation into deployment: inference was optimized by reusing the encoder output, the model was exposed through FastAPI, and the service was successfully containerized and tested locally with Docker.
+
+The primary modeling limitation remains semantic faithfulness: the model learned readable target-language patterns more effectively than precise German-to-English semantic alignment. The logical modeling improvement would therefore be substantially more and more diverse parallel training data, while the next engineering step would be optional cloud hosting of the Dockerized API.
